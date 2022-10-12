@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:developer';
 
 import 'package:flutter/material.dart';
@@ -16,8 +17,10 @@ class _HomeScreenState extends State<HomeScreen> {
   static const pressureChannel =
       EventChannel("com.niloy.native_code_example/pressure");
   String _sensorAvailable = "Unknown";
+  double _pressureReading = 0.0;
+  StreamSubscription? pressureSubscription;
 
-  /// This is where we call the native code from Flutter
+  /// This function checks if the sensor exists or not
   Future<void> _checkAvailability() async {
     try {
       /// "isSensorAvailable" is the same string we used in kotlin
@@ -33,6 +36,30 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+  /// This function reads sensor data from a stream
+  void _startReading() {
+    pressureSubscription =
+        pressureChannel.receiveBroadcastStream().listen((event) {
+      setState(() {
+        _pressureReading = event;
+      });
+    });
+  }
+
+  /// This will stop the stream from reading
+  void _stopReading() {
+    pressureSubscription?.cancel();
+    setState(() {
+      _pressureReading = 0.0;
+    });
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _startReading();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -45,11 +72,23 @@ class _HomeScreenState extends State<HomeScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text(_sensorAvailable),
+            Text("Sensor Available: $_sensorAvailable"),
             ElevatedButton(
               onPressed: _checkAvailability,
-              child: const Text("Check for Sensor"),
+              child: const Text("Check for Sensor Availability"),
             ),
+            const SizedBox(
+              height: 50,
+            ),
+            Text("Sensor Reading: $_pressureReading"),
+            ElevatedButton(
+              onPressed: _startReading,
+              child: const Text("Start Reading"),
+            ),
+            ElevatedButton(
+              onPressed: _stopReading,
+              child: const Text("Stop Reading"),
+            )
           ],
         ),
       ),
